@@ -5,6 +5,7 @@ import { getHeroCardSvg } from "../lib/cardArt/heroSvgCache";
 import { generateThumbSvg } from "../lib/cardArt/generateThumbSvg";
 import type { CollapseFrame, CollapsePreview } from "../lib/collapseEntropy";
 import { MIN_COLLAPSE_MS, delay } from "../lib/collapseEntropy";
+import { useMobileViewport } from "../lib/useMobileViewport";
 import { ORIENTATION_LABEL } from "../lib/cardOrientationUi";
 import type { Orientation } from "../types/deck";
 import type { QuantumDrawResult } from "../lib/quantumDraw";
@@ -101,6 +102,7 @@ export function DrawCollapseAnimation({
   finalResult,
   onComplete,
 }: DrawCollapseAnimationProps) {
+  const isMobile = useMobileViewport();
   const [phase, setPhase] = useState<Phase>("measure");
   const [current, setCurrent] = useState<FrameView | null>(null);
   const [outgoing, setOutgoing] = useState<FrameView | null>(null);
@@ -138,8 +140,8 @@ export function DrawCollapseAnimation({
       const finalView = resultToView(draw);
 
       if (frames.length > 0) {
-        const rapid = Math.min(12, frames.length);
-        const slow = Math.min(5, frames.length);
+        const rapid = Math.min(isMobile ? 6 : 12, frames.length);
+        const slow = Math.min(isMobile ? 2 : 5, frames.length);
         const rapidViews = Array.from({ length: rapid }, (_, i) =>
           frameToView(frames[i % frames.length]!, `p-${i}`),
         );
@@ -151,15 +153,15 @@ export function DrawCollapseAnimation({
         setPhase("flicker");
         for (let i = 0; i < rapid; i++) {
           if (cancelled) return;
-          showFrame(rapidViews[i]!, CROSSFADE_MS.flicker);
-          await delay(95 + Math.floor(i * 6));
+          showFrame(rapidViews[i]!, isMobile ? 120 : CROSSFADE_MS.flicker);
+          await delay(isMobile ? 65 + Math.floor(i * 4) : 95 + Math.floor(i * 6));
         }
 
         setPhase("slow");
         for (let i = 0; i < slow; i++) {
           if (cancelled) return;
-          showFrame(slowViews[i]!, CROSSFADE_MS.slow);
-          await delay(240 + i * 60);
+          showFrame(slowViews[i]!, isMobile ? 200 : CROSSFADE_MS.slow);
+          await delay(isMobile ? 180 + i * 40 : 240 + i * 60);
         }
       } else {
         await delay(700);
@@ -191,7 +193,7 @@ export function DrawCollapseAnimation({
     return () => {
       cancelled = true;
     };
-  }, [preview, finalResult]);
+  }, [preview, finalResult, isMobile]);
 
   const fxIntensity =
     phase === "flicker"
@@ -205,16 +207,21 @@ export function DrawCollapseAnimation({
             : 0.08;
 
   const chromaIntensity =
-    phase === "flicker" ? 1 : phase === "slow" ? 0.5 : 0;
+    isMobile ? 0 : phase === "flicker" ? 1 : phase === "slow" ? 0.5 : 0;
   const isSharpPhase = phase === "converge" || phase === "lock";
 
   return (
     <div
-      className="flex w-full max-w-[320px] flex-col items-center gap-5 py-4"
+      className="flex w-full max-w-[min(280px,92vw)] flex-col items-center gap-4 py-2 sm:max-w-[320px] sm:gap-5 sm:py-4"
       aria-live="polite"
       aria-busy={phase !== "lock"}
     >
-      <CardStageWithOrbits intensity={fxIntensity} variant="draw" tall>
+      <CardStageWithOrbits
+        intensity={isMobile ? fxIntensity * 0.55 : fxIntensity}
+        variant="draw"
+        tall
+        reducedOrbits={isMobile}
+      >
         <div className={HERO_STAGE}>
           {outgoing && (
             <motion.div

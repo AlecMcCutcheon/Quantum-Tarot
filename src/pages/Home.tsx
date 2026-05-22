@@ -19,6 +19,7 @@ import { getReading } from "../data/readings";
 import type { QuantumBasis } from "../lib/intentAlign";
 import type { CollapsePreview } from "../lib/collapseEntropy";
 import { buildCollapsePreviewFromDraw } from "../lib/collapseEntropy";
+import { useMobileViewport } from "../lib/useMobileViewport";
 import { takeQrngNotice } from "../api/qrng";
 import {
   performPartnerDraw,
@@ -37,6 +38,7 @@ type DrawState =
   | "error";
 
 export function Home() {
+  const isMobile = useMobileViewport();
   const [state, setState] = useState<DrawState>("idle");
   const [result, setResult] = useState<QuantumDrawResult | null>(null);
   const [partner, setPartner] = useState<PartnerDrawResult | null>(null);
@@ -268,7 +270,7 @@ export function Home() {
             aria-live="polite"
             aria-busy="true"
           >
-            <div className="flex h-[400px] w-full max-w-[300px] items-center justify-center rounded-xl border border-dashed border-accent/30 bg-void/50 sm:h-[450px] sm:max-w-[320px]">
+            <div className="flex h-[min(280px,58vh)] w-full max-w-[min(220px,58vw)] items-center justify-center rounded-xl border border-dashed border-accent/30 bg-void/50 sm:h-[450px] sm:max-w-[320px]">
               <span className="font-display text-xs tracking-widest text-accent/70 uppercase">
                 QRNG
               </span>
@@ -334,7 +336,11 @@ export function Home() {
             </p>
           )}
           <section className="flex w-full flex-col items-center">
-            <CardStageWithOrbits intensity={0.28} variant="ambient">
+            <CardStageWithOrbits
+              intensity={isMobile ? 0.12 : 0.28}
+              variant="ambient"
+              reducedOrbits={isMobile}
+            >
               <TarotCard
                 drawId={result.drawId}
                 card={result.card}

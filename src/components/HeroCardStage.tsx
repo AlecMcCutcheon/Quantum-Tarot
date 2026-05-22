@@ -4,7 +4,7 @@ import type { Orientation } from "../types/deck";
 
 /** Fixed stage — same size during collapse flicker and final reading. */
 export const HERO_STAGE =
-  "relative mx-auto h-[400px] w-full max-w-[300px] sm:h-[450px] sm:max-w-[320px]";
+  "relative mx-auto h-[min(280px,58vh)] w-full max-w-[min(220px,58vw)] sm:h-[450px] sm:max-w-[320px]";
 
 interface HeroCardFaceProps {
   orientation: Orientation;

@@ -33,8 +33,10 @@ export function isLateralOrientation(o: Orientation): boolean {
 
 /** Fixed footprints so primary and partner columns match per orientation. */
 export const PAIRED_SLOT = {
-  vertical: "h-[300px] w-[200px]",
-  lateral: "h-[172px] w-[248px]",
+  vertical:
+    "h-[min(220px,48vh)] w-[min(150px,40vw)] sm:h-[300px] sm:w-[200px]",
+  lateral:
+    "h-[min(120px,26vh)] w-[min(200px,48vw)] sm:h-[172px] sm:w-[248px]",
 } as const;
 
 export function pairedCardSlotClass(orientation: Orientation): string {

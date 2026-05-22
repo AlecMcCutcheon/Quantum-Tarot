@@ -108,8 +108,8 @@ function PairedColumn({
 }) {
   return (
     <div
-      className={`flex w-full max-w-[280px] flex-col items-center gap-3 ${
-        entangleGlow ? "entangle-primary-glow" : ""
+      className={`flex w-full max-w-[min(280px,100%)] flex-col items-center gap-2 max-sm:gap-2 sm:gap-3 ${
+        entangleGlow ? "sm:entangle-primary-glow" : ""
       }`}
     >
       {header}
@@ -209,19 +209,25 @@ export function EntangledPair({
     );
 
   return (
-    <div className="flex w-full max-w-3xl flex-col items-center gap-4">
-      <div className="relative grid w-full grid-cols-[1fr_auto_1fr] items-center gap-x-3 sm:gap-x-6 md:gap-x-10">
-        <div className="flex justify-end pr-1 sm:pr-2">{primaryColumn}</div>
-
-        <div className="flex items-center justify-center px-1 sm:px-2">
-          <EntanglementStrand active={strandActive} intense={strandIntense} />
+    <div className="flex w-full max-w-3xl flex-col items-center gap-4 px-1 max-sm:max-w-full">
+      <div className="relative flex w-full max-w-full flex-col items-center gap-5 max-sm:gap-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-x-6 md:gap-x-10">
+        <div className="flex w-full justify-center sm:justify-end sm:pr-2">
+          {primaryColumn}
         </div>
 
-        <div className="flex justify-start pl-1 sm:pl-2">
+        <div className="flex shrink-0 items-center justify-center max-sm:py-1 sm:px-2">
+          <EntanglementStrand
+            active={strandActive}
+            intense={strandIntense}
+            className="max-sm:rotate-90"
+          />
+        </div>
+
+        <div className="flex w-full justify-center sm:justify-start sm:pl-2">
           <AnimatePresence mode="wait">
             <motion.div
               key={partner?.drawId ?? phase}
-              className="w-full"
+              className="w-full max-w-[min(280px,100%)]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

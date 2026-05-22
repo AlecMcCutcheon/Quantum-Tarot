@@ -5,11 +5,13 @@ interface EntanglementStrandProps {
   active?: boolean;
   /** Brighter during entanglement / partner draw */
   intense?: boolean;
+  className?: string;
 }
 
 export function EntanglementStrand({
   active = true,
   intense = false,
+  className = "",
 }: EntanglementStrandProps) {
   const strokeSoft = intense
     ? "rgba(167,139,250,0.45)"
@@ -17,12 +19,12 @@ export function EntanglementStrand({
 
   return (
     <div
-      className="pointer-events-none flex w-12 items-center justify-center sm:w-16"
+      className={`pointer-events-none flex w-10 items-center justify-center max-sm:h-14 max-sm:w-28 sm:w-16 ${className}`}
       aria-hidden
     >
       <svg
         viewBox="0 0 56 100"
-        className="h-24 w-full sm:h-28"
+        className="h-20 w-full max-sm:h-14 max-sm:w-28 sm:h-28"
         fill="none"
       >
         <defs>

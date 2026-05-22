@@ -26,7 +26,7 @@ export function Layout({ children }: LayoutProps) {
             Readings seeded by live quantum entropy
           </p>
         </header>
-        <main className="flex flex-1 flex-col items-center px-4 py-8 sm:px-6 sm:py-12">
+        <main className="flex flex-1 flex-col items-center overflow-x-hidden px-3 py-6 max-sm:py-5 sm:px-6 sm:py-12">
           {children}
         </main>
       </div>
