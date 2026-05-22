@@ -2,7 +2,10 @@ import { mapDecimalToRange, mapDecimalToUnit } from "./quantumMap";
 import { normalizeOutshiftApiKey, type QrngProvider } from "./qrngSettings";
 
 const OUTSHIFT_URL = "https://api.qrng.outshift.com/api/v1/random_numbers";
+const QRANDOM_INT = "https://qrandom.io/api/random/int";
 const QRANDOM_INTS = "https://qrandom.io/api/random/ints";
+/** /ints returns 503 above ~1e9; /int accepts full 32-bit range (qrandom.io, May 2026). */
+const QRANDOM_INTS_SAFE_MAX = 1_000_000_000;
 const TIMEOUT_MS = 12000;
 
 export const FAILOVER_NOTICE =
@@ -26,7 +29,11 @@ const CORS_BRIDGE_URLS = [
 ] as const;
 
 function qrandomTargetUrl(min: number, max: number, size: number): string {
-  return `${QRANDOM_INTS}?min=${min}&max=${max}&n=${size}`;
+  if (size === 1 && max > QRANDOM_INTS_SAFE_MAX) {
+    return `${QRANDOM_INT}?min=${min}&max=${max}`;
+  }
+  const cappedMax = Math.min(max, QRANDOM_INTS_SAFE_MAX);
+  return `${QRANDOM_INTS}?min=${min}&max=${cappedMax}&n=${size}`;
 }
 
 function parseQrandomBatch(
@@ -232,13 +239,9 @@ export async function tryQrandomInt(
   size: number,
 ): Promise<{ result: number[]; raw: unknown[]; bridge?: boolean } | null> {
   const useCorsBridge = needsQrandomCorsBridge();
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const batch = await fetchQrandomBatch(min, max, size, useCorsBridge);
-    if (batch) {
-      return { result: batch.result, raw: batch.raw, bridge: useCorsBridge };
-    }
-  }
-  return null;
+  const batch = await fetchQrandomBatch(min, max, size, useCorsBridge);
+  if (!batch) return null;
+  return { result: batch.result, raw: batch.raw, bridge: useCorsBridge };
 }
 
 export function isFailoverEligible(error: string): boolean {

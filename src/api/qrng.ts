@@ -177,7 +177,7 @@ async function qrngPost<T extends QrngIntResponse | QrngFloatResponse>(
   direct: () => Promise<T | undefined>,
 ): Promise<T | undefined> {
   const payload = buildPayload(body);
-  const attempts = STATIC_HOSTED ? 2 : MAX_ATTEMPTS;
+  const attempts = STATIC_HOSTED ? 1 : MAX_ATTEMPTS;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (!STATIC_HOSTED && preferViteProxy !== false) {

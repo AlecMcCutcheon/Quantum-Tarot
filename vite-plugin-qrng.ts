@@ -6,7 +6,9 @@ import { mapDecimalToRange, mapDecimalToUnit } from "./src/lib/quantumMap";
 export type QrngSourceId = "outshift" | "qrandom";
 
 const OUTSHIFT_URL = "https://api.qrng.outshift.com/api/v1/random_numbers";
+const QRANDOM_INT = "https://qrandom.io/api/random/int";
 const QRANDOM_INTS = "https://qrandom.io/api/random/ints";
+const QRANDOM_INTS_SAFE_MAX = 1_000_000_000;
 const TIMEOUT_MS = 12000;
 
 function bitsForRange(min: number, max: number): number {
@@ -212,7 +214,10 @@ async function tryQrandomInt(
   max: number,
   size: number,
 ): Promise<{ result: number[]; raw: unknown[] } | null> {
-  const url = `${QRANDOM_INTS}?min=${min}&max=${max}&n=${size}`;
+  const url =
+    size === 1 && max > QRANDOM_INTS_SAFE_MAX
+      ? `${QRANDOM_INT}?min=${min}&max=${max}`
+      : `${QRANDOM_INTS}?min=${min}&max=${Math.min(max, QRANDOM_INTS_SAFE_MAX)}&n=${size}`;
   const res = await fetchWithTimeout(url);
   if (!res) return null;
   const json = (await res.json()) as { number?: number; numbers?: number[] };
