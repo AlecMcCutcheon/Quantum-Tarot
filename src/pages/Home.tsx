@@ -134,7 +134,7 @@ export function Home() {
       setCollapsePreview(null);
       setCollapseFinal(null);
       setErrorMsg(
-        "Quantum source unavailable. Open Settings (gear, bottom-right), pick a provider, and test the connection. For Outshift, paste your API key. No local fallback is used.",
+        "Quantum source unavailable. On static hosting the app calls qrandom.io directly (Outshift needs a key and may fail in-browser). Open Settings, test the connection, or try qrandom.io as provider.",
       );
       return;
     }
