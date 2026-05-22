@@ -162,16 +162,24 @@ export async function tryQrandomInt(
   const raw: unknown[] = [];
   for (let i = 0; i < size; i++) {
     const url = `${QRANDOM_INT}?min=${min}&max=${max}`;
-    const res = await fetchWithTimeout(url);
-    if (!res?.ok) return null;
-    try {
-      const json = (await res.json()) as { number?: number };
-      raw.push(json);
-      if (typeof json.number !== "number") return null;
-      results.push(json.number);
-    } catch {
-      return null;
+    let picked: number | null = null;
+    let block: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await fetchWithTimeout(url);
+      if (!res?.ok) continue;
+      try {
+        const json = (await res.json()) as { number?: number };
+        if (typeof json.number !== "number") continue;
+        picked = json.number;
+        block = json;
+        break;
+      } catch {
+        /* retry */
+      }
     }
+    if (picked === null) return null;
+    results.push(picked);
+    raw.push(block);
   }
   return { result: results, raw };
 }

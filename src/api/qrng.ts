@@ -33,14 +33,22 @@ export interface QrngIntParams {
 
 export type QrngSource = QrngProvider | "unknown";
 
-const QRNG_BASE = "/api/qrng";
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MS = 1000;
 
+/** GitHub Pages project sites have no /api proxy; SPA 404 returns HTML with 200. */
+const STATIC_HOSTED =
+  import.meta.env.PROD && import.meta.env.BASE_URL !== "/";
+
+function qrngApiBase(): string {
+  const base = import.meta.env.BASE_URL || "/";
+  return `${base.endsWith("/") ? base : `${base}/`}api/qrng`;
+}
+
 let lastSource: QrngSource = "unknown";
 let pendingNotice: string | null = null;
-/** null = try proxy once; true = static host / no dev proxy; false = use Vite proxy */
-let preferDirectClient: boolean | null = null;
+/** true = browser providers; false = Vite dev proxy */
+let preferDirectClient: boolean | null = STATIC_HOSTED ? true : null;
 
 export function getLastQrngSource(): QrngSource {
   return lastSource;
@@ -65,7 +73,13 @@ function parseSource(header: string | null): QrngSource {
 }
 
 function withCacheBust(path: string): string {
-  return `${QRNG_BASE}${path}?_=${Date.now()}-${performance.now()}`;
+  return `${qrngApiBase()}${path}?_=${Date.now()}-${performance.now()}`;
+}
+
+function proxyResponseUnavailable(res: Response): boolean {
+  if (isProxyUnavailable(res)) return true;
+  const ct = res.headers.get("content-type") ?? "";
+  return !ct.includes("application/json");
 }
 
 function isProxyUnavailable(res: Response | null): boolean {
@@ -103,18 +117,24 @@ async function tryProxyPost<T extends QrngIntResponse | QrngFloatResponse>(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (isProxyUnavailable(res)) {
+    if (proxyResponseUnavailable(res)) {
       return "unavailable";
     }
-    lastSource = parseSource(res.headers.get("X-QRNG-Source"));
-    const json = (await res.json()) as T & QrngErrorResponse;
+    const text = await res.text();
+    let json: T & QrngErrorResponse;
+    try {
+      json = JSON.parse(text) as T & QrngErrorResponse;
+    } catch {
+      return "unavailable";
+    }
     if (!res.ok) {
       throw new Error(json.error ?? `HTTP ${res.status}`);
     }
+    lastSource = parseSource(res.headers.get("X-QRNG-Source"));
     applyNotice((json as QrngIntResponse).notice);
     return json;
   } catch (e) {
-    if (e instanceof TypeError) {
+    if (e instanceof TypeError || e instanceof SyntaxError) {
       return "unavailable";
     }
     return undefined;
@@ -223,20 +243,26 @@ export async function testQrngConnection(
           apiKey,
         }),
       });
-      if (!isProxyUnavailable(res)) {
-        preferDirectClient = false;
-        const json = (await res.json()) as QrngTestResult & QrngErrorResponse;
-        lastSource = parseSource(res.headers.get("X-QRNG-Source"));
-        return {
-          ok: res.ok && json.ok === true,
-          message: json.message ?? json.error ?? "Connection failed",
-          source: json.source,
-          raw: json.raw,
-          mapped: json.mapped,
-          request: json.request,
-        };
+      if (!proxyResponseUnavailable(res)) {
+        const text = await res.text();
+        try {
+          const json = JSON.parse(text) as QrngTestResult & QrngErrorResponse;
+          preferDirectClient = false;
+          lastSource = parseSource(res.headers.get("X-QRNG-Source"));
+          return {
+            ok: res.ok && json.ok === true,
+            message: json.message ?? json.error ?? "Connection failed",
+            source: json.source,
+            raw: json.raw,
+            mapped: json.mapped,
+            request: json.request,
+          };
+        } catch {
+          preferDirectClient = true;
+        }
+      } else {
+        preferDirectClient = true;
       }
-      preferDirectClient = true;
     } catch {
       preferDirectClient = true;
     }
