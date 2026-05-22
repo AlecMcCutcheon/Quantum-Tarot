@@ -34,7 +34,7 @@ export function ReadingPanel({
 
   return (
     <motion.article
-      className={`mx-auto w-full text-left backdrop-blur-sm ${
+      className={`mx-auto w-full text-left max-sm:backdrop-blur-none backdrop-blur-sm ${
         isSolo
           ? "rounded-xl border border-white/10 bg-white/[0.04] p-5 sm:p-6"
           : "w-full rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-8 md:p-10"

@@ -136,7 +136,7 @@ export function Home() {
       setCollapsePreview(null);
       setCollapseFinal(null);
       setErrorMsg(
-        "Quantum source unavailable. This static site reaches qrandom.io through public CORS relays; try again or check Settings → test connection.",
+        "Quantum source unavailable. Try again in a moment or check Settings → test connection.",
       );
       return;
     }

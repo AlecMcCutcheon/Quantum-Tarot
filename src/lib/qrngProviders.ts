@@ -14,9 +14,6 @@ export const FAILOVER_NOTICE =
 export const DIRECT_NO_KEY_NOTICE =
   "No Outshift API key — this draw used qrandom.io instead.";
 
-export const CORS_BRIDGE_NOTICE =
-  "qrandom.io reached via a public CORS relay (static site; no backend proxy).";
-
 /** Public relays (allorigins.win often fails DNS). Tried in order. */
 const CORS_BRIDGE_URLS = [
   (target: string) =>
@@ -237,11 +234,15 @@ export async function tryQrandomInt(
   min: number,
   max: number,
   size: number,
-): Promise<{ result: number[]; raw: unknown[]; bridge?: boolean } | null> {
-  const useCorsBridge = needsQrandomCorsBridge();
-  const batch = await fetchQrandomBatch(min, max, size, useCorsBridge);
+): Promise<{ result: number[]; raw: unknown[] } | null> {
+  const batch = await fetchQrandomBatch(
+    min,
+    max,
+    size,
+    needsQrandomCorsBridge(),
+  );
   if (!batch) return null;
-  return { result: batch.result, raw: batch.raw, bridge: useCorsBridge };
+  return { result: batch.result, raw: batch.raw };
 }
 
 export function isFailoverEligible(error: string): boolean {
@@ -318,12 +319,7 @@ export async function runRandint(
 
   const qrandom = await tryQrandomInt(min, max, size);
   if (!qrandom) return { error: "qrandom.io unreachable." };
-  return {
-    source: "qrandom",
-    result: qrandom.result,
-    raw: qrandom.raw,
-    ...(qrandom.bridge ? { notice: CORS_BRIDGE_NOTICE } : {}),
-  };
+  return { source: "qrandom", result: qrandom.result, raw: qrandom.raw };
 }
 
 export async function runRand(
@@ -368,7 +364,6 @@ export async function runRand(
     source: "qrandom",
     result: qrandom.result.map((n) => n / 1_000_000_000),
     raw: qrandom.raw,
-    ...(qrandom.bridge ? { notice: CORS_BRIDGE_NOTICE } : {}),
   };
 }
 

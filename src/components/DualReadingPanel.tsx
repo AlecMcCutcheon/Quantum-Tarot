@@ -68,7 +68,7 @@ export function DualReadingPanel({
       </div>
 
       <motion.article
-        className="w-full rounded-2xl border border-gold/30 bg-gold/[0.06] p-6 text-left shadow-[0_0_32px_rgba(212,175,55,0.08)] backdrop-blur-sm sm:p-8"
+        className="w-full rounded-2xl border border-gold/30 bg-gold/[0.06] p-6 text-left shadow-[0_0_32px_rgba(212,175,55,0.08)] max-sm:backdrop-blur-none backdrop-blur-sm sm:p-8"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
