@@ -12,9 +12,15 @@ export const DIRECT_NO_KEY_NOTICE =
   "No Outshift API key — this draw used qrandom.io instead.";
 
 export const CORS_BRIDGE_NOTICE =
-  "qrandom.io reached via a public CORS relay. For a direct path, deploy the Cloudflare worker in /worker and set VITE_QRNG_PROXY_URL.";
+  "qrandom.io reached via a public CORS relay. For a direct path, add CLOUDFLARE_API_TOKEN to GitHub Actions or set QRNG_PROXY_URL.";
 
-const ALLORIGINS_RAW = "https://api.allorigins.win/raw?url=";
+/** Public relays (allorigins.win often fails DNS). Tried in order. */
+const CORS_BRIDGE_URLS = [
+  (target: string) =>
+    `https://api.cors.lol/?url=${encodeURIComponent(target)}`,
+  (target: string) =>
+    `https://api.cors.syrins.tech/?url=${encodeURIComponent(target)}`,
+] as const;
 
 /** Browser cannot call qrandom.io directly; use when no edge proxy is configured. */
 export function needsQrandomCorsBridge(): boolean {
@@ -26,26 +32,30 @@ export function needsQrandomCorsBridge(): boolean {
   );
 }
 
+function qrandomFetchUrls(min: number, max: number, useCorsBridge: boolean): string[] {
+  const target = `${QRANDOM_INT}?min=${min}&max=${max}`;
+  if (!useCorsBridge) return [target];
+  return CORS_BRIDGE_URLS.map((bridge) => bridge(target));
+}
+
 async function fetchQrandomOne(
   min: number,
   max: number,
   useCorsBridge: boolean,
 ): Promise<{ number: number; raw: unknown } | null> {
-  const target = `${QRANDOM_INT}?min=${min}&max=${max}`;
-  const url = useCorsBridge
-    ? `${ALLORIGINS_RAW}${encodeURIComponent(target)}`
-    : target;
-
-  const res = await fetchWithTimeout(url);
-  if (!res?.ok) return null;
-  try {
-    const text = await res.text();
-    const json = JSON.parse(text) as { number?: number };
-    if (typeof json.number !== "number") return null;
-    return { number: json.number, raw: json };
-  } catch {
-    return null;
+  for (const url of qrandomFetchUrls(min, max, useCorsBridge)) {
+    const res = await fetchWithTimeout(url);
+    if (!res?.ok) continue;
+    try {
+      const text = await res.text();
+      const json = JSON.parse(text) as { number?: number };
+      if (typeof json.number !== "number") continue;
+      return { number: json.number, raw: json };
+    } catch {
+      /* try next relay */
+    }
   }
+  return null;
 }
 
 function bitsForRange(min: number, max: number): number {

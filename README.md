@@ -65,7 +65,9 @@ Live site: `https://alecmccutcheon.github.io/Quantum-Tarot/`
 
    In the GitHub repo: **Settings → Secrets and variables → Actions → Variables**, add `QRNG_PROXY_URL` = your worker URL (e.g. `https://quantum-tarot-qrng.<account>.workers.dev`, no trailing slash). Re-run the Pages deploy workflow so `VITE_QRNG_PROXY_URL` is baked into the build.
 
-2. **CORS relay fallback** — If `QRNG_PROXY_URL` is unset, production falls back to fetching qrandom via `api.allorigins.win` (slower, third-party relay).
+2. **CORS relay fallback** — If `QRNG_PROXY_URL` is unset, production tries public relays (`api.cors.lol`, then `api.cors.syrins.tech`). These are third-party and may rate-limit.
+
+   **Optional:** add GitHub secret `CLOUDFLARE_API_TOKEN` (+ `CLOUDFLARE_ACCOUNT_ID`). The Pages workflow will deploy `worker/` automatically and bake the worker URL into the build.
 
 Local `npm run dev` still uses the Vite `/api/qrng` middleware in [vite-plugin-qrng.ts](vite-plugin-qrng.ts).
 

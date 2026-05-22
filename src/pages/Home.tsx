@@ -134,7 +134,7 @@ export function Home() {
       setCollapsePreview(null);
       setCollapseFinal(null);
       setErrorMsg(
-        "Quantum source unavailable. GitHub Pages cannot call qrandom.io from the browser (CORS). Deploy the Cloudflare worker in /worker, set repository variable QRNG_PROXY_URL to its URL, and redeploy—or wait for the CORS relay fallback if enabled.",
+        "Quantum source unavailable. GitHub Pages cannot call qrandom.io directly. Add CLOUDFLARE_API_TOKEN to repo secrets (auto-deploys the worker), set QRNG_PROXY_URL, or retry—the app falls back to public CORS relays.",
       );
       return;
     }
