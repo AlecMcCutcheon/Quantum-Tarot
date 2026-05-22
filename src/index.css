@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Orbitron", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-void: #0a0a12;
+  --color-nebula: #1a1030;
+  --color-star: #e8e4f0;
+  --color-accent: #a78bfa;
+  --color-gold: #fbbf24;
+  --color-cosmic: #6366f1;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  background: linear-gradient(165deg, var(--color-void) 0%, var(--color-nebula) 45%, #0f172a 100%);
+  color: var(--color-star);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Themed scrollbars (library, modals) */
+.library-scroll,
+.themed-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167, 139, 250, 0.55) rgba(255, 255, 255, 0.06);
+}
+
+.library-scroll::-webkit-scrollbar,
+.themed-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.library-scroll::-webkit-scrollbar-track,
+.themed-scroll::-webkit-scrollbar-track {
+  margin: 4px 0;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+.library-scroll::-webkit-scrollbar-thumb,
+.themed-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    rgba(167, 139, 250, 0.65),
+    rgba(99, 102, 241, 0.45)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+.library-scroll::-webkit-scrollbar-thumb:hover,
+.themed-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    rgba(167, 139, 250, 0.85),
+    rgba(251, 191, 36, 0.5)
+  );
+}
+
+.readability-blob-wrap {
+  isolation: isolate;
+}
+
+.readability-blob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.readability-blob--primary {
+  width: 108%;
+  height: 118%;
+  border-radius: 58% 42% 48% 52% / 52% 44% 56% 48%;
+  background: radial-gradient(
+    ellipse 85% 75% at 42% 38%,
+    rgba(10, 10, 18, 0.78) 0%,
+    rgba(26, 16, 48, 0.48) 48%,
+    transparent 72%
+  );
+  filter: blur(36px);
+}
+
+.readability-blob--secondary {
+  width: 88%;
+  height: 92%;
+  border-radius: 44% 56% 62% 38% / 48% 52% 44% 56%;
+  background: radial-gradient(
+    ellipse 80% 70% at 58% 62%,
+    rgba(10, 10, 18, 0.55) 0%,
+    rgba(15, 23, 42, 0.32) 55%,
+    transparent 78%
+  );
+  filter: blur(28px);
+}
+
+.readability-blob-wrap--compact .readability-blob--primary {
+  width: 130%;
+  height: 220%;
+  filter: blur(22px);
+}
+
+.readability-blob-wrap--compact .readability-blob--secondary {
+  width: 110%;
+  height: 180%;
+  filter: blur(18px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .readability-blob--primary,
+  .readability-blob--secondary {
+    filter: blur(20px);
+  }
+}
+
+@keyframes starfield-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-12%, -18%, 0);
+  }
+}
+
+@keyframes star-twinkle {
+  0%,
+  100% {
+    opacity: var(--star-o, 0.5);
+    filter: brightness(1);
+  }
+  35% {
+    opacity: calc(var(--star-o, 0.5) * 0.2);
+    filter: brightness(0.65);
+  }
+  55% {
+    opacity: min(1, calc(var(--star-o, 0.5) * 1.35));
+    filter: brightness(1.25);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .starfield-drift-layer {
+    animation: none !important;
+  }
+  .starfield-star {
+    animation: none !important;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes entangle-primary-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 10px rgba(167, 139, 250, 0.2));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px rgba(167, 139, 250, 0.45));
+  }
+}
+
+.entangle-primary-glow {
+  animation: entangle-primary-glow 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
