@@ -61,7 +61,7 @@ export function QrngSettings() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-20 rounded-full border border-white/10 bg-void/80 p-2.5 text-star/50 shadow-lg backdrop-blur-sm transition hover:border-accent/40 hover:text-accent"
+        className="fixed right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-20 rounded-full border border-white/10 bg-void/80 p-2.5 text-star/50 shadow-lg backdrop-blur-sm transition hover:border-accent/40 hover:text-accent"
         aria-label="QRNG settings"
         title="Quantum RNG settings"
       >

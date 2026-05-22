@@ -123,6 +123,18 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
     onClose();
   };
 
+  const handleBackdrop = () => {
+    if (
+      selectedId &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 639px)").matches
+    ) {
+      setSelectedId(null);
+      return;
+    }
+    handleClose();
+  };
+
   const handleSelect = (id: string) => {
     setSelectedId(id);
     setOrientation("upright");
@@ -143,10 +155,10 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             aria-label="Close card library"
-            onClick={handleClose}
+            onClick={handleBackdrop}
           />
           <motion.div
-            className="fixed top-0 left-0 z-50 flex h-dvh max-w-[100vw] overflow-hidden border-r border-white/10 bg-void/95 shadow-2xl backdrop-blur-md"
+            className="fixed top-0 left-0 z-50 flex h-dvh w-full max-w-[100vw] overflow-hidden border-r border-white/10 bg-void/95 shadow-2xl backdrop-blur-md sm:max-w-none"
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
@@ -155,7 +167,11 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
             aria-label="Card library"
           >
             <nav
-              className="flex h-full w-[min(100vw,18rem)] shrink-0 flex-col border-r border-white/10 sm:w-72"
+              className={`flex h-full shrink-0 flex-col border-r border-white/10 sm:w-72 ${
+                selectedId
+                  ? "hidden sm:flex sm:w-72"
+                  : "flex w-full min-w-0 sm:w-[min(100vw,18rem)]"
+              }`}
               aria-label="Card index"
             >
               <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-4">
@@ -207,14 +223,14 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
               </ul>
             </nav>
 
-            <AnimatePresence>
+            <AnimatePresence mode="wait">
               {selectedId && selected && detailSvg && (
                 <motion.aside
                   key="library-detail"
-                  className="flex h-full w-[min(calc(100vw-18rem),24rem)] shrink-0 flex-col overflow-hidden border-l border-white/10 bg-nebula/50 sm:w-96"
-                  initial={{ x: -32, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -32, opacity: 0 }}
+                  className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-nebula/50 sm:max-w-96 sm:shrink-0 sm:border-l sm:border-white/10"
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 24 }}
                   transition={{ type: "spring", stiffness: 280, damping: 30 }}
                   aria-label={`${selected.quantumName} details`}
                 >
@@ -229,13 +245,15 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
                     <button
                       type="button"
                       onClick={() => setSelectedId(null)}
-                      className="rounded-lg px-2 py-1 text-xs text-star/60 hover:bg-white/10 hover:text-star"
-                      aria-label="Back to card list"
+                      className="rounded-lg px-2 py-1 text-xs text-star/60 hover:bg-white/10 hover:text-star sm:px-2"
+                      aria-label="Back to deck library"
                     >
-                      ←
+                      <span className="sm:hidden">← Library</span>
+                      <span className="hidden sm:inline">←</span>
                     </button>
                     <p className="truncate text-xs text-star/50">
-                      Card detail
+                      <span className="sm:hidden">{selected.quantumName}</span>
+                      <span className="hidden sm:inline">Card detail</span>
                     </p>
                   </header>
 
@@ -331,7 +349,7 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
   );
 }
 
-/** Fixed tab to open the library */
+/** Bottom-left control to open the library (mirrors QRNG settings placement). */
 export function CardLibraryTrigger({
   onClick,
 }: {
@@ -341,15 +359,26 @@ export function CardLibraryTrigger({
     <button
       type="button"
       onClick={onClick}
-      className="fixed top-1/2 left-0 z-30 -translate-y-1/2 rounded-r-lg border border-l-0 border-white/15 bg-void/80 px-2 py-4 text-[10px] font-semibold tracking-widest text-accent uppercase shadow-lg backdrop-blur-sm transition hover:border-accent/40 hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-20 rounded-full border border-white/10 bg-void/80 p-2.5 text-star/50 shadow-lg backdrop-blur-sm transition hover:border-accent/40 hover:text-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
       aria-label="Open card library"
+      title="Card library"
     >
-      <span
-        className="inline-block"
-        style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
       >
-        Library
-      </span>
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+        <path d="M8 7h6" />
+        <path d="M8 11h8" />
+      </svg>
     </button>
   );
 }
