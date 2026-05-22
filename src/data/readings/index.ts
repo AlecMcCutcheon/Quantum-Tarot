@@ -1,5 +1,6 @@
 import type { CardReading } from "../../types/reading";
 import type { Orientation } from "../../types/deck";
+import { frameReadingForOrientation } from "../../lib/readingOrientationFraming";
 import { buildAllReadings } from "./buildReadings";
 
 const ALL_READINGS = buildAllReadings();
@@ -13,5 +14,6 @@ export function getReading(
   orientation: Orientation,
 ): CardReading[Orientation] | undefined {
   const card = READINGS_MAP.get(cardId);
-  return card?.[orientation];
+  const reading = card?.[orientation];
+  return reading ? frameReadingForOrientation(reading, orientation) : undefined;
 }

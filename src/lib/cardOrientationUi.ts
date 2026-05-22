@@ -7,6 +7,13 @@ export const ROTATION: Record<Orientation, string> = {
   conjugate: "-rotate-90",
 };
 
+export const ORIENTATION_SHORT: Record<Orientation, string> = {
+  upright: "Upright",
+  reversed: "Reversed",
+  transverse: "Transverse",
+  conjugate: "Conjugate",
+};
+
 export const ORIENTATION_LABEL: Record<Orientation, string> = {
   upright: "Upright · Direct",
   reversed: "Reversed · Inverted",

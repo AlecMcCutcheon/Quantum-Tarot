@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import type { ReadingText } from "../types/reading";
 import type { Orientation, TarotCard } from "../types/deck";
+import { ORIENTATION_SHORT } from "../lib/cardOrientationUi";
 
 interface ReadingPanelProps {
   card: TarotCard;
@@ -53,7 +54,7 @@ export function ReadingPanel({
           sectionLabel ? "mt-1" : ""
         } ${isSolo ? "text-[10px]" : "text-xs"}`}
       >
-        Solo · {orientation}
+        Solo · {ORIENTATION_SHORT[orientation]}
       </p>
       <h2
         className={`font-display font-semibold text-accent ${

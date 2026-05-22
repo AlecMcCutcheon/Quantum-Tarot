@@ -1,4 +1,5 @@
 import type { ReadingText } from "../../types/reading";
+import { MAJOR_VERTICAL } from "./majorVertical";
 
 type Expand = { detail?: string; guidance?: string };
 
@@ -409,11 +410,26 @@ const VERTICAL_EXPAND: Record<
   },
 };
 
+function applyMajorVertical(
+  id: string,
+  pole: "upright" | "reversed",
+  base: ReadingText,
+): ReadingText {
+  const custom = MAJOR_VERTICAL[id]?.[pole];
+  if (!custom) return base;
+  return {
+    summary: custom.summary ?? base.summary,
+    detail: custom.detail ?? base.detail,
+    guidance: custom.guidance ?? base.guidance,
+  };
+}
+
 export function enrichMajorVertical(
   id: string,
   pole: "upright" | "reversed",
   base: ReadingText,
 ): ReadingText {
+  const layered = applyMajorVertical(id, pole, base);
   const extra = VERTICAL_EXPAND[id]?.[pole];
-  return extra ? append(base, extra) : base;
+  return extra ? append(layered, extra) : layered;
 }

@@ -4,6 +4,12 @@ import { DECK } from "../data/deck";
 import { getReading } from "../data/readings";
 import { useLibraryThumbs } from "../hooks/useLibraryThumbs";
 import { getLibraryDetailSvg } from "../lib/cardArt/libraryDetailSvg";
+import {
+  ORIENTATION_LABEL,
+  ORIENTATION_SHORT,
+  ORIENTATION_STYLE,
+  ROTATION,
+} from "../lib/cardOrientationUi";
 import type { Orientation, TarotCard } from "../types/deck";
 
 const ORIENTATIONS: Orientation[] = [
@@ -12,34 +18,6 @@ const ORIENTATIONS: Orientation[] = [
   "transverse",
   "conjugate",
 ];
-
-const ORIENTATION_SHORT: Record<Orientation, string> = {
-  upright: "Upright",
-  reversed: "Reversed",
-  transverse: "Transverse",
-  conjugate: "Conjugate",
-};
-
-const ORIENTATION_LABEL: Record<Orientation, string> = {
-  upright: "Upright · Direct",
-  reversed: "Reversed · Inverted",
-  transverse: "Transverse · Lateral",
-  conjugate: "Conjugate · Second crossing",
-};
-
-const ROTATION: Record<Orientation, string> = {
-  upright: "rotate-0",
-  reversed: "rotate-180",
-  transverse: "rotate-90",
-  conjugate: "-rotate-90",
-};
-
-const ORIENTATION_BADGE: Record<Orientation, string> = {
-  upright: "bg-accent/20 text-accent",
-  reversed: "bg-cosmic/30 text-accent",
-  transverse: "bg-gold/20 text-gold",
-  conjugate: "bg-gold/10 text-gold/90",
-};
 
 interface CardLibraryProps {
   open: boolean;
@@ -158,7 +136,11 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
             onClick={handleBackdrop}
           />
           <motion.div
-            className="fixed top-0 left-0 z-50 flex h-dvh w-full max-w-[100vw] overflow-hidden border-r border-white/10 bg-void/95 shadow-2xl backdrop-blur-md sm:max-w-none"
+            className={`fixed top-0 left-0 z-50 flex h-dvh w-full max-w-[100vw] overflow-hidden border-r border-white/10 bg-void/95 shadow-2xl backdrop-blur-md sm:max-w-none ${
+              selectedId
+                ? "sm:w-[min(52rem,calc(100vw-2rem))]"
+                : "sm:w-[min(26rem,calc(100vw-2rem))]"
+            }`}
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
@@ -167,10 +149,10 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
             aria-label="Card library"
           >
             <nav
-              className={`flex h-full shrink-0 flex-col border-r border-white/10 sm:w-72 ${
+              className={`flex h-full shrink-0 flex-col border-r border-white/10 ${
                 selectedId
-                  ? "hidden sm:flex sm:w-72"
-                  : "flex w-full min-w-0 sm:w-[min(100vw,18rem)]"
+                  ? "hidden sm:flex sm:w-1/2 sm:min-w-[18rem] sm:max-w-[26rem]"
+                  : "flex w-full min-w-0 sm:w-full"
               }`}
               aria-label="Card index"
             >
@@ -227,7 +209,7 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
               {selectedId && selected && detailSvg && (
                 <motion.aside
                   key="library-detail"
-                  className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-nebula/50 sm:max-w-96 sm:shrink-0 sm:border-l sm:border-white/10"
+                  className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-nebula/50 sm:min-w-[18rem] sm:max-w-[26rem] sm:shrink-0 sm:border-l sm:border-white/10"
                   initial={{ opacity: 0, x: 24 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 24 }}
@@ -274,7 +256,7 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
                         />
                       </div>
                       <span
-                        className={`mt-3 rounded-full px-3 py-1 text-xs font-medium tracking-wide ${ORIENTATION_BADGE[orientation]}`}
+                        className={`mt-3 rounded-full px-3 py-1 text-xs font-medium tracking-wide ${ORIENTATION_STYLE[orientation].badge}`}
                       >
                         {ORIENTATION_LABEL[orientation]}
                       </span>
@@ -317,7 +299,10 @@ export function CardLibrary({ open, onClose }: CardLibraryProps) {
 
                     {reading ? (
                       <article className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4 text-left">
-                        <p className="text-sm leading-relaxed font-medium text-star/95">
+                        <p className="text-[10px] font-medium tracking-wide text-gold/80 uppercase">
+                          {ORIENTATION_LABEL[orientation]}
+                        </p>
+                        <p className="mt-2 text-sm leading-relaxed font-medium text-star/95">
                           {reading.summary}
                         </p>
                         <p className="mt-3 text-xs leading-relaxed text-star/80">

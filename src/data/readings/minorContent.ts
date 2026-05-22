@@ -5,7 +5,6 @@ import { getMinorVertical } from "./minorVertical";
 import {
   buildMinorReversed,
   buildMinorUpright,
-  enrichMinorLateral,
   type SuitMeta,
 } from "./minorReadingBuilder";
 import { enrichMinorLateralExpand } from "./minorReadingEnrich";
@@ -65,28 +64,8 @@ function buildOrientations(
   return {
     upright: buildMinorUpright(card, pip, meta),
     reversed: buildMinorReversed(card, pip, meta),
-    transverse: enrichMinorLateralExpand(
-      card.id,
-      "transverse",
-      enrichMinorLateral(
-        pip.transverse,
-        card,
-        pip,
-        meta,
-        "transverse",
-      ),
-    ),
-    conjugate: enrichMinorLateralExpand(
-      card.id,
-      "conjugate",
-      enrichMinorLateral(
-        pip.conjugate,
-        card,
-        pip,
-        meta,
-        "conjugate",
-      ),
-    ),
+    transverse: enrichMinorLateralExpand(card.id, "transverse", pip.transverse),
+    conjugate: enrichMinorLateralExpand(card.id, "conjugate", pip.conjugate),
   };
 }
 
