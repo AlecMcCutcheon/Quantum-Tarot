@@ -2,7 +2,7 @@ import { mapDecimalToRange, mapDecimalToUnit } from "./quantumMap";
 import { normalizeOutshiftApiKey, type QrngProvider } from "./qrngSettings";
 
 const OUTSHIFT_URL = "https://api.qrng.outshift.com/api/v1/random_numbers";
-const QRANDOM_INT = "https://qrandom.io/api/random/int";
+const QRANDOM_INTS = "https://qrandom.io/api/random/ints";
 const TIMEOUT_MS = 12000;
 
 export const FAILOVER_NOTICE =
@@ -25,15 +25,29 @@ const CORS_BRIDGE_URLS = [
     `https://proxy.corsfix.com/?${encodeURIComponent(target)}`,
 ] as const;
 
-function parseQrandomResponse(text: string): { number: number; raw: unknown } | null {
+function qrandomTargetUrl(min: number, max: number, size: number): string {
+  return `${QRANDOM_INTS}?min=${min}&max=${max}&n=${size}`;
+}
+
+function parseQrandomBatch(
+  text: string,
+  size: number,
+): { result: number[]; raw: unknown[] } | null {
   try {
     const json = JSON.parse(text) as {
       number?: number;
+      numbers?: number[];
       corsfix_error?: string;
     };
     if (json.corsfix_error) return null;
-    if (typeof json.number !== "number") return null;
-    return { number: json.number, raw: json };
+    if (Array.isArray(json.numbers) && json.numbers.length >= size) {
+      const result = json.numbers.slice(0, size);
+      return { result, raw: [json] };
+    }
+    if (size === 1 && typeof json.number === "number") {
+      return { result: [json.number], raw: [json] };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -48,22 +62,23 @@ export function needsQrandomCorsBridge(): boolean {
   );
 }
 
-function qrandomFetchUrls(min: number, max: number, useCorsBridge: boolean): string[] {
-  const target = `${QRANDOM_INT}?min=${min}&max=${max}`;
+function qrandomFetchUrls(min: number, max: number, size: number, useCorsBridge: boolean): string[] {
+  const target = qrandomTargetUrl(min, max, size);
   if (!useCorsBridge) return [target];
   return CORS_BRIDGE_URLS.map((bridge) => bridge(target));
 }
 
-async function fetchQrandomOne(
+async function fetchQrandomBatch(
   min: number,
   max: number,
+  size: number,
   useCorsBridge: boolean,
-): Promise<{ number: number; raw: unknown } | null> {
-  for (const url of qrandomFetchUrls(min, max, useCorsBridge)) {
+): Promise<{ result: number[]; raw: unknown[] } | null> {
+  for (const url of qrandomFetchUrls(min, max, size, useCorsBridge)) {
     const res = await fetchWithTimeout(url);
     if (!res?.ok) continue;
     const text = await res.text();
-    const parsed = parseQrandomResponse(text);
+    const parsed = parseQrandomBatch(text, size);
     if (parsed) return parsed;
   }
   return null;
@@ -217,23 +232,13 @@ export async function tryQrandomInt(
   size: number,
 ): Promise<{ result: number[]; raw: unknown[]; bridge?: boolean } | null> {
   const useCorsBridge = needsQrandomCorsBridge();
-  const results: number[] = [];
-  const raw: unknown[] = [];
-  for (let i = 0; i < size; i++) {
-    let picked: number | null = null;
-    let block: unknown = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const one = await fetchQrandomOne(min, max, useCorsBridge);
-      if (!one) continue;
-      picked = one.number;
-      block = one.raw;
-      break;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const batch = await fetchQrandomBatch(min, max, size, useCorsBridge);
+    if (batch) {
+      return { result: batch.result, raw: batch.raw, bridge: useCorsBridge };
     }
-    if (picked === null) return null;
-    results.push(picked);
-    raw.push(block);
   }
-  return { result: results, raw, bridge: useCorsBridge };
+  return null;
 }
 
 export function isFailoverEligible(error: string): boolean {
