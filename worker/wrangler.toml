@@ -1,6 +1,0 @@
-name = "quantum-tarot-qrng"
-main = "index.ts"
-compatibility_date = "2024-09-01"
-
-[build]
-command = ""

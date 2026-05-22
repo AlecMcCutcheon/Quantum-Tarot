@@ -51,25 +51,13 @@ See [docs/quantum-random-api.md](docs/quantum-random-api.md) for API details.
 
 Each card shows `quantumName` with `classicName` as subtitle so traditional mappings stay clear.
 
-## GitHub Pages & quantum randomness
+## GitHub Pages (static) & quantum randomness
 
 Live site: `https://alecmccutcheon.github.io/Quantum-Tarot/`
 
-**qrandom.io does not allow browser CORS**, so the deployed app cannot call it directly from GitHub Pages. Use one of:
+Deploy is **static HTML/JS only** — no server, Workers, or CI secrets. [qrandom.io](https://qrandom.io) does not send CORS headers, so the browser cannot call it directly from GitHub Pages. Production uses public **CORS relays** from client `fetch` (in order: `api.cors.lol`, `api.cors.syrins.tech`, `proxy.corsfix.com`). Relays are third-party and may rate-limit. **Corsfix** requires registering `alecmccutcheon.github.io` at [corsfix.com](https://corsfix.com).
 
-1. **Cloudflare Worker (recommended)** — `worker/` proxies Outshift and qrandom server-side with `Access-Control-Allow-Origin: *`.
-
-   ```bash
-   npx wrangler deploy --config worker/wrangler.toml
-   ```
-
-   In the GitHub repo: **Settings → Secrets and variables → Actions → Variables**, add `QRNG_PROXY_URL` = your worker URL (e.g. `https://quantum-tarot-qrng.<account>.workers.dev`, no trailing slash). Re-run the Pages deploy workflow so `VITE_QRNG_PROXY_URL` is baked into the build.
-
-2. **CORS relay fallback** — If `QRNG_PROXY_URL` is unset, production tries public relays (`api.cors.lol`, `api.cors.syrins.tech`, then `proxy.corsfix.com`). Relays are third-party and may rate-limit. **Corsfix** only works from browser `fetch` (not pasted URLs) and requires registering your Pages host (`alecmccutcheon.github.io`) at [corsfix.com](https://corsfix.com).
-
-   **Optional:** add GitHub secret `CLOUDFLARE_API_TOKEN` (+ `CLOUDFLARE_ACCOUNT_ID`). The Pages workflow will deploy `worker/` automatically and bake the worker URL into the build.
-
-Local `npm run dev` still uses the Vite `/api/qrng` middleware in [vite-plugin-qrng.ts](vite-plugin-qrng.ts).
+Local `npm run dev` uses the Vite `/api/qrng` middleware in [vite-plugin-qrng.ts](vite-plugin-qrng.ts) instead of relays.
 
 ## Customizing card art
 

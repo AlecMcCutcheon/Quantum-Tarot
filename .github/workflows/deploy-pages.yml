@@ -15,30 +15,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  qrng-worker:
-    runs-on: ubuntu-latest
-    env:
-      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-    outputs:
-      deployment-url: ${{ steps.deploy.outputs.deployment-url }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Deploy QRNG worker
-        id: deploy
-        if: ${{ env.CF_API_TOKEN != '' }}
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ env.CF_API_TOKEN }}
-          accountId: ${{ env.CF_ACCOUNT_ID }}
-          wranglerVersion: "4"
-          command: deploy --config worker/wrangler.toml
-
   build:
-    needs: qrng-worker
-    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -57,7 +34,6 @@ jobs:
         run: npm run build
         env:
           GITHUB_PAGES: "true"
-          VITE_QRNG_PROXY_URL: ${{ needs.qrng-worker.outputs.deployment-url || vars.QRNG_PROXY_URL }}
 
       - name: SPA fallback for client-side routes
         run: cp dist/index.html dist/404.html

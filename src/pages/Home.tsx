@@ -134,7 +134,7 @@ export function Home() {
       setCollapsePreview(null);
       setCollapseFinal(null);
       setErrorMsg(
-        "Quantum source unavailable. GitHub Pages cannot call qrandom.io directly. Add CLOUDFLARE_API_TOKEN to repo secrets (auto-deploys the worker), set QRNG_PROXY_URL, or retry—the app falls back to public CORS relays.",
+        "Quantum source unavailable. This static site reaches qrandom.io through public CORS relays; try again or check Settings → test connection.",
       );
       return;
     }

@@ -40,12 +40,6 @@ const RETRY_DELAY_MS = 1000;
 const STATIC_HOSTED =
   import.meta.env.PROD && import.meta.env.BASE_URL !== "/";
 
-/** Cloudflare Worker URL (no trailing slash). Set in Pages build env. */
-const EDGE_PROXY = (import.meta.env.VITE_QRNG_PROXY_URL || "").replace(
-  /\/$/,
-  "",
-);
-
 function qrngApiBase(): string {
   const base = import.meta.env.BASE_URL || "/";
   return `${base.endsWith("/") ? base : `${base}/`}api/qrng`;
@@ -80,15 +74,10 @@ function withCacheBust(path: string): string {
   return `${qrngApiBase()}${path}?_=${Date.now()}-${performance.now()}`;
 }
 
-function isProxyUnavailable(res: Response | null): boolean {
-  if (!res) return true;
+function proxyResponseUnavailable(res: Response): boolean {
   if (res.status === 404 || res.status === 405) return true;
   const ct = res.headers.get("content-type") ?? "";
   return !ct.includes("application/json");
-}
-
-function proxyResponseUnavailable(res: Response): boolean {
-  return isProxyUnavailable(res);
 }
 
 function applyNotice(notice?: string): void {
@@ -151,28 +140,6 @@ async function tryViteProxyPost<T extends QrngIntResponse | QrngFloatResponse>(
   }
 }
 
-async function tryEdgeProxyPost<T extends QrngIntResponse | QrngFloatResponse>(
-  path: "/randint" | "/rand",
-  payload: QrngRequestBody,
-): Promise<T | undefined> {
-  if (!EDGE_PROXY) return undefined;
-  try {
-    const res = await fetch(`${EDGE_PROXY}${path}`, {
-      method: "POST",
-      cache: "no-store",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const parsed = await parseProxyJson<T>(res);
-    if (parsed === "unavailable" || parsed === undefined) {
-      return undefined;
-    }
-    return parsed;
-  } catch {
-    return undefined;
-  }
-}
-
 async function runDirectRandint(
   params: QrngIntParams,
 ): Promise<QrngIntResponse | undefined> {
@@ -210,15 +177,10 @@ async function qrngPost<T extends QrngIntResponse | QrngFloatResponse>(
   direct: () => Promise<T | undefined>,
 ): Promise<T | undefined> {
   const payload = buildPayload(body);
-  const attempts = STATIC_HOSTED && !EDGE_PROXY ? 2 : MAX_ATTEMPTS;
+  const attempts = STATIC_HOSTED ? 2 : MAX_ATTEMPTS;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
-    if (EDGE_PROXY) {
-      const edge = await tryEdgeProxyPost<T>(path, payload);
-      if (edge) return edge;
-    }
-
-    if (preferViteProxy !== false) {
+    if (!STATIC_HOSTED && preferViteProxy !== false) {
       const proxy = await tryViteProxyPost<T>(path, payload);
       if (proxy === "unavailable") {
         preferViteProxy = false;
@@ -228,11 +190,9 @@ async function qrngPost<T extends QrngIntResponse | QrngFloatResponse>(
       }
     }
 
-    if (!EDGE_PROXY) {
-      const directResult = await direct();
-      if (directResult !== undefined) {
-        return directResult;
-      }
+    const directResult = await direct();
+    if (directResult !== undefined) {
+      return directResult;
     }
 
     if (attempt < attempts - 1) {
@@ -274,32 +234,7 @@ export async function testQrngConnection(
   const apiKey = getOutshiftApiKey();
   const payload = { provider: chosen, apiKey };
 
-  if (EDGE_PROXY) {
-    try {
-      const res = await fetch(`${EDGE_PROXY}/test`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const json = (await res.json()) as QrngTestResult & QrngErrorResponse;
-      if (json.source) lastSource = json.source;
-      return {
-        ok: res.ok && json.ok === true,
-        message: json.message ?? json.error ?? "Connection failed",
-        source: json.source,
-        raw: json.raw,
-        mapped: json.mapped,
-        request: json.request,
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        message: e instanceof Error ? e.message : "Edge proxy unreachable",
-      };
-    }
-  }
-
-  if (preferViteProxy !== false) {
+  if (!STATIC_HOSTED && preferViteProxy !== false) {
     try {
       const res = await fetch(withCacheBust("/test"), {
         method: "POST",

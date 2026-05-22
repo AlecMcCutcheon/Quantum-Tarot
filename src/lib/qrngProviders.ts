@@ -12,7 +12,7 @@ export const DIRECT_NO_KEY_NOTICE =
   "No Outshift API key — this draw used qrandom.io instead.";
 
 export const CORS_BRIDGE_NOTICE =
-  "qrandom.io reached via a public CORS relay. For a direct path, add CLOUDFLARE_API_TOKEN to GitHub Actions or set QRNG_PROXY_URL.";
+  "qrandom.io reached via a public CORS relay (static site; no backend proxy).";
 
 /** Public relays (allorigins.win often fails DNS). Tried in order. */
 const CORS_BRIDGE_URLS = [
@@ -44,8 +44,7 @@ export function needsQrandomCorsBridge(): boolean {
   return (
     typeof window !== "undefined" &&
     import.meta.env.PROD &&
-    import.meta.env.BASE_URL !== "/" &&
-    !import.meta.env.VITE_QRNG_PROXY_URL
+    import.meta.env.BASE_URL !== "/"
   );
 }
 
