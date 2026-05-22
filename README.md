@@ -51,13 +51,23 @@ See [docs/quantum-random-api.md](docs/quantum-random-api.md) for API details.
 
 Each card shows `quantumName` with `classicName` as subtitle so traditional mappings stay clear.
 
-## Production proxy
+## GitHub Pages & quantum randomness
 
-Static hosts must rewrite `/api/qrng` to the ETH API (same as [vite.config.ts](vite.config.ts)). Example Netlify `_redirects`:
+Live site: `https://alecmccutcheon.github.io/Quantum-Tarot/`
 
-```
-/api/qrng/*  http://qrng.ethz.ch/api/:splat  200
-```
+**qrandom.io does not allow browser CORS**, so the deployed app cannot call it directly from GitHub Pages. Use one of:
+
+1. **Cloudflare Worker (recommended)** — `worker/` proxies Outshift and qrandom server-side with `Access-Control-Allow-Origin: *`.
+
+   ```bash
+   npx wrangler deploy --config worker/wrangler.toml
+   ```
+
+   In the GitHub repo: **Settings → Secrets and variables → Actions → Variables**, add `QRNG_PROXY_URL` = your worker URL (e.g. `https://quantum-tarot-qrng.<account>.workers.dev`, no trailing slash). Re-run the Pages deploy workflow so `VITE_QRNG_PROXY_URL` is baked into the build.
+
+2. **CORS relay fallback** — If `QRNG_PROXY_URL` is unset, production falls back to fetching qrandom via `api.allorigins.win` (slower, third-party relay).
+
+Local `npm run dev` still uses the Vite `/api/qrng` middleware in [vite-plugin-qrng.ts](vite-plugin-qrng.ts).
 
 ## Customizing card art
 

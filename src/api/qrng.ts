@@ -36,9 +36,15 @@ export type QrngSource = QrngProvider | "unknown";
 const MAX_ATTEMPTS = 5;
 const RETRY_DELAY_MS = 1000;
 
-/** GitHub Pages project sites have no /api proxy; SPA 404 returns HTML with 200. */
+/** GitHub Pages project sites have no Vite /api proxy. */
 const STATIC_HOSTED =
   import.meta.env.PROD && import.meta.env.BASE_URL !== "/";
+
+/** Cloudflare Worker URL (no trailing slash). Set in Pages build env. */
+const EDGE_PROXY = (import.meta.env.VITE_QRNG_PROXY_URL || "").replace(
+  /\/$/,
+  "",
+);
 
 function qrngApiBase(): string {
   const base = import.meta.env.BASE_URL || "/";
@@ -47,14 +53,12 @@ function qrngApiBase(): string {
 
 let lastSource: QrngSource = "unknown";
 let pendingNotice: string | null = null;
-/** true = browser providers; false = Vite dev proxy */
-let preferDirectClient: boolean | null = STATIC_HOSTED ? true : null;
+let preferViteProxy: boolean | null = import.meta.env.DEV ? null : false;
 
 export function getLastQrngSource(): QrngSource {
   return lastSource;
 }
 
-/** One-shot notice after a successful draw that used provider failover. */
 export function takeQrngNotice(): string | null {
   const n = pendingNotice;
   pendingNotice = null;
@@ -76,17 +80,15 @@ function withCacheBust(path: string): string {
   return `${qrngApiBase()}${path}?_=${Date.now()}-${performance.now()}`;
 }
 
-function proxyResponseUnavailable(res: Response): boolean {
-  if (isProxyUnavailable(res)) return true;
-  const ct = res.headers.get("content-type") ?? "";
-  return !ct.includes("application/json");
-}
-
 function isProxyUnavailable(res: Response | null): boolean {
   if (!res) return true;
   if (res.status === 404 || res.status === 405) return true;
   const ct = res.headers.get("content-type") ?? "";
   return !ct.includes("application/json");
+}
+
+function proxyResponseUnavailable(res: Response): boolean {
+  return isProxyUnavailable(res);
 }
 
 function applyNotice(notice?: string): void {
@@ -100,16 +102,39 @@ interface QrngRequestBody extends QrngIntParams {
   apiKey?: string | null;
 }
 
-async function tryProxyPost<T extends QrngIntResponse | QrngFloatResponse>(
-  path: "/randint" | "/rand",
-  body: QrngRequestBody,
-): Promise<T | "unavailable" | undefined> {
-  const payload: QrngRequestBody = {
+function buildPayload(body: QrngRequestBody): QrngRequestBody {
+  return {
     ...body,
     provider: body.provider ?? getQrngProvider(),
     apiKey: getOutshiftApiKey() ?? null,
   };
+}
 
+async function parseProxyJson<T extends QrngIntResponse | QrngFloatResponse>(
+  res: Response,
+): Promise<T | "unavailable" | undefined> {
+  if (proxyResponseUnavailable(res)) {
+    return "unavailable";
+  }
+  const text = await res.text();
+  let json: T & QrngErrorResponse;
+  try {
+    json = JSON.parse(text) as T & QrngErrorResponse;
+  } catch {
+    return "unavailable";
+  }
+  if (!res.ok) {
+    throw new Error(json.error ?? `HTTP ${res.status}`);
+  }
+  lastSource = parseSource(res.headers.get("X-QRNG-Source"));
+  applyNotice((json as QrngIntResponse).notice);
+  return json;
+}
+
+async function tryViteProxyPost<T extends QrngIntResponse | QrngFloatResponse>(
+  path: "/randint" | "/rand",
+  payload: QrngRequestBody,
+): Promise<T | "unavailable" | undefined> {
   try {
     const res = await fetch(withCacheBust(path), {
       method: "POST",
@@ -117,26 +142,33 @@ async function tryProxyPost<T extends QrngIntResponse | QrngFloatResponse>(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (proxyResponseUnavailable(res)) {
-      return "unavailable";
-    }
-    const text = await res.text();
-    let json: T & QrngErrorResponse;
-    try {
-      json = JSON.parse(text) as T & QrngErrorResponse;
-    } catch {
-      return "unavailable";
-    }
-    if (!res.ok) {
-      throw new Error(json.error ?? `HTTP ${res.status}`);
-    }
-    lastSource = parseSource(res.headers.get("X-QRNG-Source"));
-    applyNotice((json as QrngIntResponse).notice);
-    return json;
+    return await parseProxyJson<T>(res);
   } catch (e) {
     if (e instanceof TypeError || e instanceof SyntaxError) {
       return "unavailable";
     }
+    return undefined;
+  }
+}
+
+async function tryEdgeProxyPost<T extends QrngIntResponse | QrngFloatResponse>(
+  path: "/randint" | "/rand",
+  payload: QrngRequestBody,
+): Promise<T | undefined> {
+  if (!EDGE_PROXY) return undefined;
+  try {
+    const res = await fetch(`${EDGE_PROXY}${path}`, {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const parsed = await parseProxyJson<T>(res);
+    if (parsed === "unavailable" || parsed === undefined) {
+      return undefined;
+    }
+    return parsed;
+  } catch {
     return undefined;
   }
 }
@@ -177,24 +209,33 @@ async function qrngPost<T extends QrngIntResponse | QrngFloatResponse>(
   body: QrngRequestBody,
   direct: () => Promise<T | undefined>,
 ): Promise<T | undefined> {
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    if (preferDirectClient !== true) {
-      const proxy = await tryProxyPost<T>(path, body);
+  const payload = buildPayload(body);
+  const attempts = STATIC_HOSTED && !EDGE_PROXY ? 2 : MAX_ATTEMPTS;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (EDGE_PROXY) {
+      const edge = await tryEdgeProxyPost<T>(path, payload);
+      if (edge) return edge;
+    }
+
+    if (preferViteProxy !== false) {
+      const proxy = await tryViteProxyPost<T>(path, payload);
       if (proxy === "unavailable") {
-        preferDirectClient = true;
+        preferViteProxy = false;
       } else if (proxy !== undefined) {
-        preferDirectClient = false;
+        preferViteProxy = true;
         return proxy;
       }
     }
 
-    const directResult = await direct();
-    if (directResult !== undefined) {
-      preferDirectClient = true;
-      return directResult;
+    if (!EDGE_PROXY) {
+      const directResult = await direct();
+      if (directResult !== undefined) {
+        return directResult;
+      }
     }
 
-    if (attempt < MAX_ATTEMPTS - 1) {
+    if (attempt < attempts - 1) {
       await sleep(RETRY_DELAY_MS);
     }
   }
@@ -231,40 +272,57 @@ export async function testQrngConnection(
 ): Promise<QrngTestResult> {
   const chosen = provider ?? getQrngProvider();
   const apiKey = getOutshiftApiKey();
+  const payload = { provider: chosen, apiKey };
 
-  if (preferDirectClient !== true) {
+  if (EDGE_PROXY) {
+    try {
+      const res = await fetch(`${EDGE_PROXY}/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const json = (await res.json()) as QrngTestResult & QrngErrorResponse;
+      if (json.source) lastSource = json.source;
+      return {
+        ok: res.ok && json.ok === true,
+        message: json.message ?? json.error ?? "Connection failed",
+        source: json.source,
+        raw: json.raw,
+        mapped: json.mapped,
+        request: json.request,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        message: e instanceof Error ? e.message : "Edge proxy unreachable",
+      };
+    }
+  }
+
+  if (preferViteProxy !== false) {
     try {
       const res = await fetch(withCacheBust("/test"), {
         method: "POST",
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: chosen,
-          apiKey,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!proxyResponseUnavailable(res)) {
-        const text = await res.text();
-        try {
-          const json = JSON.parse(text) as QrngTestResult & QrngErrorResponse;
-          preferDirectClient = false;
-          lastSource = parseSource(res.headers.get("X-QRNG-Source"));
-          return {
-            ok: res.ok && json.ok === true,
-            message: json.message ?? json.error ?? "Connection failed",
-            source: json.source,
-            raw: json.raw,
-            mapped: json.mapped,
-            request: json.request,
-          };
-        } catch {
-          preferDirectClient = true;
-        }
-      } else {
-        preferDirectClient = true;
+        const json = (await res.json()) as QrngTestResult & QrngErrorResponse;
+        preferViteProxy = true;
+        if (json.source) lastSource = json.source;
+        return {
+          ok: res.ok && json.ok === true,
+          message: json.message ?? json.error ?? "Connection failed",
+          source: json.source,
+          raw: json.raw,
+          mapped: json.mapped,
+          request: json.request,
+        };
       }
+      preferViteProxy = false;
     } catch {
-      preferDirectClient = true;
+      preferViteProxy = false;
     }
   }
 
@@ -272,6 +330,5 @@ export async function testQrngConnection(
   if (direct.source) {
     lastSource = direct.source;
   }
-  preferDirectClient = true;
   return direct;
 }

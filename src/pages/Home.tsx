@@ -134,7 +134,7 @@ export function Home() {
       setCollapsePreview(null);
       setCollapseFinal(null);
       setErrorMsg(
-        "Quantum source unavailable. On static hosting the app calls qrandom.io directly (Outshift needs a key and may fail in-browser). Open Settings, test the connection, or try qrandom.io as provider.",
+        "Quantum source unavailable. GitHub Pages cannot call qrandom.io from the browser (CORS). Deploy the Cloudflare worker in /worker, set repository variable QRNG_PROXY_URL to its URL, and redeploy—or wait for the CORS relay fallback if enabled.",
       );
       return;
     }

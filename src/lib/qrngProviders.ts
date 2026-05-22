@@ -11,6 +11,43 @@ export const FAILOVER_NOTICE =
 export const DIRECT_NO_KEY_NOTICE =
   "No Outshift API key — this draw used qrandom.io instead.";
 
+export const CORS_BRIDGE_NOTICE =
+  "qrandom.io reached via a public CORS relay. For a direct path, deploy the Cloudflare worker in /worker and set VITE_QRNG_PROXY_URL.";
+
+const ALLORIGINS_RAW = "https://api.allorigins.win/raw?url=";
+
+/** Browser cannot call qrandom.io directly; use when no edge proxy is configured. */
+export function needsQrandomCorsBridge(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    import.meta.env.PROD &&
+    import.meta.env.BASE_URL !== "/" &&
+    !import.meta.env.VITE_QRNG_PROXY_URL
+  );
+}
+
+async function fetchQrandomOne(
+  min: number,
+  max: number,
+  useCorsBridge: boolean,
+): Promise<{ number: number; raw: unknown } | null> {
+  const target = `${QRANDOM_INT}?min=${min}&max=${max}`;
+  const url = useCorsBridge
+    ? `${ALLORIGINS_RAW}${encodeURIComponent(target)}`
+    : target;
+
+  const res = await fetchWithTimeout(url);
+  if (!res?.ok) return null;
+  try {
+    const text = await res.text();
+    const json = JSON.parse(text) as { number?: number };
+    if (typeof json.number !== "number") return null;
+    return { number: json.number, raw: json };
+  } catch {
+    return null;
+  }
+}
+
 function bitsForRange(min: number, max: number): number {
   const span = max - min + 1;
   return Math.min(10000, Math.max(8, Math.ceil(Math.log2(span)) + 2));
@@ -157,31 +194,25 @@ export async function tryQrandomInt(
   min: number,
   max: number,
   size: number,
-): Promise<{ result: number[]; raw: unknown[] } | null> {
+): Promise<{ result: number[]; raw: unknown[]; bridge?: boolean } | null> {
+  const useCorsBridge = needsQrandomCorsBridge();
   const results: number[] = [];
   const raw: unknown[] = [];
   for (let i = 0; i < size; i++) {
-    const url = `${QRANDOM_INT}?min=${min}&max=${max}`;
     let picked: number | null = null;
     let block: unknown = null;
     for (let attempt = 0; attempt < 3; attempt++) {
-      const res = await fetchWithTimeout(url);
-      if (!res?.ok) continue;
-      try {
-        const json = (await res.json()) as { number?: number };
-        if (typeof json.number !== "number") continue;
-        picked = json.number;
-        block = json;
-        break;
-      } catch {
-        /* retry */
-      }
+      const one = await fetchQrandomOne(min, max, useCorsBridge);
+      if (!one) continue;
+      picked = one.number;
+      block = one.raw;
+      break;
     }
     if (picked === null) return null;
     results.push(picked);
     raw.push(block);
   }
-  return { result: results, raw };
+  return { result: results, raw, bridge: useCorsBridge };
 }
 
 export function isFailoverEligible(error: string): boolean {
@@ -258,7 +289,12 @@ export async function runRandint(
 
   const qrandom = await tryQrandomInt(min, max, size);
   if (!qrandom) return { error: "qrandom.io unreachable." };
-  return { source: "qrandom", result: qrandom.result, raw: qrandom.raw };
+  return {
+    source: "qrandom",
+    result: qrandom.result,
+    raw: qrandom.raw,
+    ...(qrandom.bridge ? { notice: CORS_BRIDGE_NOTICE } : {}),
+  };
 }
 
 export async function runRand(
@@ -303,6 +339,7 @@ export async function runRand(
     source: "qrandom",
     result: qrandom.result.map((n) => n / 1_000_000_000),
     raw: qrandom.raw,
+    ...(qrandom.bridge ? { notice: CORS_BRIDGE_NOTICE } : {}),
   };
 }
 
