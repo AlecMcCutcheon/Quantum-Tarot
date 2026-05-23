@@ -2,18 +2,37 @@ import type { CardReading } from "../../types/reading";
 import type { Orientation } from "../../types/deck";
 import { frameReadingForOrientation } from "../../lib/readingOrientationFraming";
 import { buildAllReadings } from "./buildReadings";
+import { loadReadingDepth } from "./readingDepthLoader";
 
-const ALL_READINGS = buildAllReadings();
+let readingsMap: Map<string, CardReading> | null = null;
+let initPromise: Promise<void> | null = null;
 
-export const READINGS_MAP: Map<string, CardReading> = new Map(
-  ALL_READINGS.map((r) => [r.cardId, r]),
-);
+function rebuildMap(): void {
+  readingsMap = new Map(buildAllReadings().map((r) => [r.cardId, r]));
+}
+
+/** Preload full deck readings (depth chunks + build). Call during splash. */
+export function initReadings(): Promise<void> {
+  if (readingsMap) return Promise.resolve();
+  if (initPromise) return initPromise;
+
+  initPromise = loadReadingDepth().then(() => {
+    rebuildMap();
+  });
+
+  return initPromise;
+}
+
+export function areReadingsReady(): boolean {
+  return readingsMap !== null;
+}
 
 export function getReading(
   cardId: string,
   orientation: Orientation,
 ): CardReading[Orientation] | undefined {
-  const card = READINGS_MAP.get(cardId);
+  if (!readingsMap) return undefined;
+  const card = readingsMap.get(cardId);
   const reading = card?.[orientation];
   return reading ? frameReadingForOrientation(reading, orientation) : undefined;
 }

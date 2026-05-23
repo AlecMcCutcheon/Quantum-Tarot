@@ -309,17 +309,55 @@ For each card record:
 
 ---
 
-## 5. Authoring checklist
+## 5. Quality bar (definition of done)
 
-- [x] Research doc majors 00–21
-- [x] `majorConjugate.ts` rewritten from §3 (not blanket algorithm)
-- [x] Majors transverse split to `majorTransverse.ts` (§3 aligned)
-- [x] Minors: Biddy per-pip table (`minorLateral/`, 56 cards)
-- [x] Minors: enriched upright/reversed via `minorReadingBuilder.ts`; laterals expanded at build
-- [x] Majors: lateral + select vertical expansions via `majorReadingEnrich.ts` at build
-- [x] Minors: second-pass lateral depth via `minorReadingEnrich.ts` (Biddy articles + RW imagery; Lattice/Pentacles full suit + thin Swords/Cups entries)
-- [ ] Optional: deepen remaining Wands laterals and any pip without enrich entry
-- [ ] Remove misleading “counter-lateral = wrong” UI copy if present
+Each built reading (`summary`, `detail`, `guidance`) must pass `npm run audit:readings` thresholds:
+
+| Field | Minimum length | Content |
+|-------|----------------|---------|
+| `summary` | 80 chars | Pole named; core lesson in plain language |
+| `detail` | 800 chars | 3–5 paragraphs (see below) |
+| `guidance` | 120 chars | Actionable; specific; no filler |
+
+**Detail structure (in order):**
+
+1. Rider–Waite imagery — symbols on the card and traditional meaning  
+2. Biddy / traditional keywords — for this pole (upright, reversed, or lateral logic from §3–4)  
+3. Quantum reframe — this card’s `quantumName` as metaphor  
+4. Lived domains — at least two of work, relationship, body, inner life  
+5. Pole distinction — how this pole differs from the other three *for this card*
+
+**Anti-patterns:** generic `minorReadingBuilder` boilerplate; lateral copy that only says “upright” with a transverse label; single-sentence detail; append-only expand snippets without canonical body.
+
+**Gold references:** `minorVertical/cups.ts` (Ace of Cups upright); `majorContent.ts` (Fool reversed); exemplar `major-02` in `majorVertical.ts` + `majorTransverse.ts` + `majorConjugate.ts`.
+
+### 5.1 Completion matrix
+
+Run `npm run audit:readings` for backlog (shortest first). Per card: `npm run audit:readings -- --card=major-02`.
+
+Mark **U**pright / **R**eversed / **T**ransverse / **C**onjugate when all three fields pass audit.
+
+| Card ID | U | R | T | C | Primary files |
+|---------|---|---|---|---|---------------|
+| major-00 | | | | | `majorVertical.ts`, `majorTransverse.ts`, `majorConjugate.ts` |
+| major-01 | | | | | same |
+| major-02 | | | | | same (exemplar) |
+| major-03 … major-21 | | | | | same |
+| wands-ace … wands-king | | | | | `minorVertical/wands.ts`, `minorLateral/wands.ts` |
+| cups-ace … cups-king | | | | | `minorVertical/cups.ts`, `minorLateral/cups.ts` |
+| swords-ace … swords-king | | | | | `minorVertical/swords.ts`, `minorLateral/swords.ts` |
+| pentacles-ace … pentacles-king | | | | | `minorVertical/pentacles.ts`, `minorLateral/pentacles.ts` |
+
+### 5.2 Authoring checklist (infrastructure)
+
+- [x] Research doc majors 00–21  
+- [x] `majorConjugate.ts` / `majorTransverse.ts` split  
+- [x] Minors: `minorLateral/` + `minorVertical/` (56 pips)  
+- [x] `scripts/audit-readings.ts` + `npm run audit:readings`  
+- [x] All 312 cells pass audit (`readingDepth/` overrides; `npm run audit:readings`)  
+- [x] `*_EXPAND` maps trimmed (`majorReadingEnrich.ts`, `minorReadingEnrich.ts` no-op)  
+- [x] Lazy depth chunks: `readingDepthLoader.ts` + `initReadings()` during splash  
+- [x] Gold exemplar: `major-02` in `readingDepth/majors.ts`  
 
 ---
 

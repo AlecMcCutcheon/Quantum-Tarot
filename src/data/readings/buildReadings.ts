@@ -8,7 +8,17 @@ import {
   enrichMajorTransverse,
   enrichMajorVertical,
 } from "./majorReadingEnrich";
+import { applyReadingDepth } from "./applyReadingDepth";
 import { getMinorReading } from "./minorContent";
+import type { Orientation } from "../../types/deck";
+
+function depth(
+  cardId: string,
+  orientation: Orientation,
+  reading: CardReading[Orientation],
+): CardReading[Orientation] {
+  return applyReadingDepth(cardId, orientation, reading);
+}
 
 export function buildAllReadings(): CardReading[] {
   return DECK.map((card) => {
@@ -21,16 +31,38 @@ export function buildAllReadings(): CardReading[] {
       }
       return {
         cardId: card.id,
-        upright: enrichMajorVertical(card.id, "upright", content.upright),
-        reversed: enrichMajorVertical(card.id, "reversed", content.reversed),
-        transverse: enrichMajorTransverse(card.id, transverse),
-        conjugate: enrichMajorConjugate(card.id, conjugate),
+        upright: depth(
+          card.id,
+          "upright",
+          enrichMajorVertical(card.id, "upright", content.upright),
+        ),
+        reversed: depth(
+          card.id,
+          "reversed",
+          enrichMajorVertical(card.id, "reversed", content.reversed),
+        ),
+        transverse: depth(
+          card.id,
+          "transverse",
+          enrichMajorTransverse(card.id, transverse),
+        ),
+        conjugate: depth(
+          card.id,
+          "conjugate",
+          enrichMajorConjugate(card.id, conjugate),
+        ),
       };
     }
     const minor = getMinorReading(card);
     if (!minor) {
       throw new Error(`Missing minor reading: ${card.id}`);
     }
-    return { cardId: card.id, ...minor };
+    return {
+      cardId: card.id,
+      upright: depth(card.id, "upright", minor.upright),
+      reversed: depth(card.id, "reversed", minor.reversed),
+      transverse: depth(card.id, "transverse", minor.transverse),
+      conjugate: depth(card.id, "conjugate", minor.conjugate),
+    };
   });
 }
